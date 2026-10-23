@@ -1,71 +1,188 @@
-# QuickFIX 1.16.0 — Windows x64 TLS wheel
+# QuickFIX 1.16.0 — Windows x64 TLS Wheel
 
-Paket workflow GitHub Actions. **Belum dijalankan pada runner Windows.**
-Ini belum merupakan wheel yang sudah berhasil dibangun.
+Prebuilt QuickFIX Python wheel for **Windows x64 with TLS/OpenSSL support**, built and tested using GitHub Actions.
 
-## Jalankan
+This repository provides an automated build workflow for compiling QuickFIX 1.16.0 on Windows, including OpenSSL dependencies and a local TLS/FIX connectivity test.
 
-1. Buat repository GitHub kosong, misalnya `quickfix-windows-wheel`.
-2. Ekstrak ZIP ini. Masukkan semua isinya ke root repository, termasuk
-   folder `.github`. Jangan menaruh seluruh folder proyek satu tingkat
-   di bawah root. Pastikan file workflow berada di
-   `.github/workflows/build-quickfix.yml`.
-3. Commit ke default branch.
-4. Buka **Actions → Build QuickFIX 1.16.0 Windows TLS → Run workflow**.
-5. Pilih versi Python sesuai server. Default: **CPython 3.9, x64**.
-6. Setelah run berhasil, buka bagian **Artifacts** dan download
-   `quickfix-1.16.0-cp3.9-windows-x64-tls` (nama menyesuaikan input).
-7. Ekstrak artifact ZIP, kemudian install `.whl` di server:
+**Build Status:** Successfully built and tested on Windows using CPython 3.9 (x64).
 
-```bat
-python -m pip install --no-index C:\packages\quickfix-1.16.0-cp39-cp39-win_amd64.whl
+## Download
+
+**QuickFIX 1.16.0 — Windows x64 / Python 3.9 / TLS Enabled**
+
+**File:** `quickfix-1.16.0-cp3.9-windows-x64-tls.zip`
+
+**[Download QuickFIX 1.16.0 Windows TLS Wheel](https://github.com/hervibest/quickfix-windows-wheel/actions/runs/39897775037/artifacts/12477568571)**
+
+Package details:
+
+| Property | Value |
+|---|---|
+| QuickFIX Version | 1.16.0 |
+| Platform | Windows x64 |
+| Python Version | CPython 3.9 |
+| TLS/OpenSSL | Enabled |
+| Build Environment | GitHub Actions — Windows Server 2022 |
+| Build Result | Successful |
+| Local TLS/FIX Test | Passed |
+| Artifact Size | Approximately 5.7 MB |
+| Artifact Expiration | November 6, 2026 |
+
+**Note:** GitHub may require you to sign in before downloading GitHub Actions artifacts. The download link is subject to GitHub's artifact retention policy.
+
+## Installation
+
+### 1. Download the Wheel
+
+Download the ZIP artifact using the link above.
+
+### 2. Extract the Archive
+
+Extract the downloaded ZIP file to a directory, for example:
+
+```text
+C:\packages\
+    quickfix-1.16.0-cp39-cp39-win_amd64.whl
 ```
 
-Wheel Windows ini hanya untuk Windows x64 dan versi CPython yang cocok.
-Jika runtime MSVC yang diperlukan belum tersedia, pasang Microsoft Visual
-C++ Redistributable 2015–2022 x64 sesuai kebijakan server.
+### 3. Install QuickFIX
 
-## Yang dilakukan workflow
+Make sure Python 3.9 x64 is installed.
 
-- Download source resmi PyPI 1.16.0 dan verifikasi SHA256 yang diharapkan.
-- Terapkan overlay build MSVC dengan `HAVE_SSL=1` dan C++17.
-- Lengkapi `stdafx.h` yang tidak disertakan sdist.
-- Build OpenSSL x64 menggunakan vcpkg bawaan runner Windows 2022.
-- Bundle dependency DLL OpenSSL menggunakan delvewheel.
-- Install wheel ke virtualenv bersih, buang vcpkg dari PATH, lalu jalankan
-  QuickFIX sebagai initiator ke server TLS Python di loopback.
-- Server tes meminta dan memverifikasi client certificate, menerima FIX
-  Logon, dan membalas Logon. Test mensyaratkan callback `onLogon` QuickFIX.
-- Upload wheel hanya bila build dan tes lulus. Jika gagal, lihat log run
-  dan artifact diagnosis jika tersedia.
+```powershell
+python --version
+```
 
-Sertifikat tes dibuat sementara; tidak diperlukan IP, credentials, private
-key, maupun sertifikat Bloomberg. Tes lokal ini tidak membuktikan koneksi
-Bloomberg, validasi nama host QuickFIX, atau kesiapan produksi.
+Install the wheel:
 
-## Catatan build
+```powershell
+python -m pip install --no-index "C:\packages\quickfix-1.16.0-cp39-cp39-win_amd64.whl"
+```
 
-Versi Python dapat dipilih: 3.9, 3.10, 3.11, 3.12. Kombinasi ini merupakan
-target build; keberhasilannya harus dibuktikan oleh workflow.
-Source checksum dipatok. Versi tool Python dipatok; image runner, versi
-OpenSSL/vcpkg, dan major tag Actions mengikuti lingkungan GitHub sehingga
-build ini belum sepenuhnya reproducible. Jangan menganggap nomor versi
-QuickFIX saja cukup untuk mereproduksi binary.
+To upgrade an existing QuickFIX installation:
 
-Paket tidak mempublikasikan ke PyPI atau membuat GitHub Release.
-Artifact disimpan 14 hari. Unduh sebelum kedaluwarsa.
+```powershell
+python -m pip uninstall quickfix -y
 
-## Files
+python -m pip install --no-index "C:\packages\quickfix-1.16.0-cp39-cp39-win_amd64.whl"
+```
 
-- `.github/workflows/build-quickfix.yml`: workflow manual.
-- `scripts/prepare_source.py`: download, verifikasi, patch source.
-- `scripts/setup_windows.py`: overlay setuptools untuk MSVC/OpenSSL.
-- `scripts/test_tls.py`: tes TLS dua arah dan FIX Logon lokal.
+### 4. Verify Installation
 
-Source resmi: https://pypi.org/project/quickfix/1.16.0/
-QuickFIX: https://github.com/quickfix/quickfix
-DLL packaging: https://github.com/adang1345/delvewheel
+```powershell
+python -c "import quickfix; print('QuickFIX imported successfully')"
+```
 
+The wheel is compatible only with the matching CPython version and Windows x64 architecture.
 
-## File
-quickfix-1.16.0-cp3.9-windows-x64-tls.zip : https://github.com/hervibest/quickfix-windows-wheel/actions/runs/39897775037/artifacts/12477568571
+If required, install the Microsoft Visual C++ Redistributable 2015–2022 (x64).
+
+## Build Your Own Wheel
+
+You can also build QuickFIX for your preferred Python version using GitHub Actions.
+
+### Steps
+
+1. Create or fork a GitHub repository, such as `quickfix-windows-wheel`.
+2. Place the project files in the repository root, including the `.github` directory.
+3. Ensure the workflow file exists at `.github/workflows/build-quickfix.yml`.
+4. Commit and push the files to the default branch.
+5. Navigate to **Actions → Build QuickFIX 1.16.0 Windows TLS → Run workflow**.
+6. Select the required Python version. The default is CPython 3.9 x64.
+7. After the workflow completes successfully, download the generated wheel from the **Artifacts** section.
+
+Supported build targets:
+
+- CPython 3.9
+- CPython 3.10
+- CPython 3.11
+- CPython 3.12
+
+The successful CPython 3.9 build does not automatically guarantee that all other target versions will build successfully.
+
+## What the Workflow Does
+
+The GitHub Actions workflow automatically performs the following operations:
+
+1. Downloads the official QuickFIX 1.16.0 source distribution from PyPI and verifies its expected SHA256 checksum.
+2. Applies an MSVC build overlay with `HAVE_SSL=1` and C++17 support.
+3. Provides the missing `stdafx.h` header required by the source distribution.
+4. Builds OpenSSL x64 using vcpkg on the Windows runner.
+5. Bundles the required OpenSSL DLL dependencies using `delvewheel`.
+6. Builds a Windows-compatible Python wheel.
+7. Installs the generated wheel into a clean Python virtual environment.
+8. Removes vcpkg from `PATH` and executes a local TLS connectivity test.
+9. Starts QuickFIX as a FIX initiator and connects it to a local Python TLS server.
+10. Verifies mutual TLS authentication, FIX Logon exchange, and successful execution of QuickFIX's `onLogon` callback.
+11. Uploads the wheel artifact only if the build and test stages succeed.
+
+## TLS and FIX Connectivity Testing
+
+The automated test verifies:
+
+- TLS connectivity between QuickFIX and a local Python server.
+- Client certificate authentication.
+- Server-side verification of the client certificate.
+- FIX Logon message transmission.
+- FIX Logon response processing.
+- Successful QuickFIX session establishment.
+
+Temporary test certificates are generated locally.
+
+No Bloomberg credentials, private keys, IP addresses, or production certificates are required.
+
+**Important:** Passing the local TLS test does not guarantee compatibility with Bloomberg FIX endpoints, hostname validation behavior, or production readiness.
+
+Real-world integration still requires endpoint-specific connectivity testing, certificate validation, configuration review, and operational testing.
+
+## Project Structure
+
+```text
+.github/
+└── workflows/
+    └── build-quickfix.yml
+
+scripts/
+├── prepare_source.py
+├── setup_windows.py
+└── test_tls.py
+```
+
+| File | Description |
+|---|---|
+| `build-quickfix.yml` | GitHub Actions build and test workflow |
+| `prepare_source.py` | Downloads, verifies, and patches the QuickFIX source |
+| `setup_windows.py` | Configures MSVC and OpenSSL build settings |
+| `test_tls.py` | Performs local mutual TLS and FIX Logon tests |
+
+## Build Reproducibility
+
+The build process pins the QuickFIX source checksum and selected Python build tools.
+
+However, complete binary reproducibility is not guaranteed because the GitHub Actions runner image, OpenSSL/vcpkg dependencies, and major GitHub Actions versions may change over time.
+
+For production deployments, consider recording the final dependency versions and wheel checksums and performing additional security and compatibility testing.
+
+## Limitations
+
+- Windows x64 only.
+- Requires the matching CPython version.
+- Prebuilt artifact currently provided for Python 3.9.
+- Bloomberg FIX connectivity is not covered by the automated local test.
+- No automatic publication to PyPI or GitHub Releases.
+- GitHub Actions artifacts are retained for 14 days.
+
+## References
+
+- [Official QuickFIX 1.16.0 on PyPI](https://pypi.org/project/quickfix/1.16.0/)
+- [QuickFIX GitHub Repository](https://github.com/quickfix/quickfix)
+- [delvewheel — Windows Wheel Dependency Bundling](https://github.com/adang1345/delvewheel)
+- [GitHub Actions Build](https://github.com/hervibest/quickfix-windows-wheel/actions/runs/39897775037)
+
+## Disclaimer
+
+This is an independently built Windows Python wheel based on the official QuickFIX 1.16.0 source distribution.
+
+It is not an official QuickFIX release.
+
+Use in enterprise or financial systems should be subject to appropriate security reviews, dependency verification, integration testing, and operational approval.

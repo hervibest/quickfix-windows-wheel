@@ -1,0 +1,108 @@
+name: Build QuickFIX 1.16.0 Windows TLS
+
+on:
+  workflow_dispatch:
+    inputs:
+      python_version:
+        description: CPython version (must match the server)
+        required: true
+        default: '3.9'
+        type: choice
+        options:
+          - '3.9'
+          - '3.10'
+          - '3.11'
+          - '3.12'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          architecture: x64
+
+      - name: Install Python build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install setuptools==75.8.0 wheel==0.45.1 build==1.2.2.post1 delvewheel==1.11.0 cryptography==44.0.2
+          if ($LASTEXITCODE -ne 0) { throw 'Build tool installation failed' }
+
+      - name: Build OpenSSL with the runner vcpkg
+        run: |
+          $root = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $root) { throw 'Runner does not provide vcpkg' }
+          git -C $root rev-parse HEAD
+          & "$root/vcpkg.exe" install openssl:x64-windows --recurse
+          if ($LASTEXITCODE -ne 0) { throw 'OpenSSL build failed' }
+          "QF_OPENSSL_ROOT=$root/installed/x64-windows" >> $env:GITHUB_ENV
+
+      - name: Prepare verified QuickFIX source
+        run: python scripts/prepare_source.py
+
+      - name: Compile wheel with MSVC and TLS enabled
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
+          call "%VSINSTALL%\VC\Auxiliary\Build\vcvars64.bat"
+          if errorlevel 1 exit /b 1
+          cd build-source\quickfix-1.16.0
+          python -m build --wheel --no-isolation
+
+      - name: Bundle OpenSSL runtime DLLs
+        run: |
+          $wheel = @(Get-ChildItem build-source/quickfix-1.16.0/dist/*.whl)
+          if ($wheel.Count -ne 1) { throw 'Expected exactly one wheel' }
+          python -m delvewheel repair --add-path "$env:QF_OPENSSL_ROOT/bin" --wheel-dir wheelhouse $wheel[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw 'DLL bundling failed' }
+
+      - name: Test repaired wheel in a clean environment
+        run: |
+          python -m venv smoke-env
+          $python = "$pwd/smoke-env/Scripts/python.exe"
+          $wheel = @(Get-ChildItem wheelhouse/*.whl)
+          & $python -m pip install --no-index $wheel[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw 'Wheel installation failed' }
+          & $python -m pip install cryptography==44.0.2
+          if ($LASTEXITCODE -ne 0) { throw 'Test dependency installation failed' }
+          # Remove vcpkg's binary directories: the wheel must carry its own DLLs.
+          $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -notmatch 'vcpkg' }) -join ';'
+          & $python scripts/test_tls.py
+          if ($LASTEXITCODE -ne 0) { throw 'TLS smoke test failed' }
+
+      - name: Record artifact checksum and build information
+        run: |
+          python -m pip freeze > wheelhouse/build-environment.txt
+          Get-FileHash wheelhouse/*.whl -Algorithm SHA256 | Format-List | Out-File wheelhouse/SHA256.txt
+          Copy-Item scripts/test_tls.py wheelhouse/
+          Copy-Item README.md wheelhouse/
+          Copy-Item smoke-output/tls-result.json wheelhouse/
+          Copy-Item "$env:QF_OPENSSL_ROOT/share/openssl/copyright" wheelhouse/OpenSSL-LICENSE.txt
+
+      - name: Upload wheel only after tests pass
+        uses: actions/upload-artifact@v4
+        with:
+          name: quickfix-1.16.0-cp${{ inputs.python_version }}-windows-x64-tls
+          path: wheelhouse/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload diagnostic logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quickfix-build-diagnostics
+          path: |
+            smoke-output/logs/
+            smoke-output/tls-result.json
+            build-source/quickfix-1.16.0/*.egg-info/
+          if-no-files-found: ignore

@@ -65,3 +65,7 @@ Artifact disimpan 14 hari. Unduh sebelum kedaluwarsa.
 Source resmi: https://pypi.org/project/quickfix/1.16.0/
 QuickFIX: https://github.com/quickfix/quickfix
 DLL packaging: https://github.com/adang1345/delvewheel
+
+
+## File
+quickfix-1.16.0-cp3.9-windows-x64-tls.zip : https://github.com/hervibest/quickfix-windows-wheel/actions/runs/39897775037/artifacts/12477568571

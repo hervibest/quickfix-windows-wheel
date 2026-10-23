@@ -35,6 +35,7 @@ def main():
     (source / 'C++/stdafx.h').write_text('''#pragma once
 #include <winsock2.h>
 #include <windows.h>
+#include <ws2tcpip.h>
 #include "config.h"
 #include "config_windows.h"
 ''', encoding='utf-8')
